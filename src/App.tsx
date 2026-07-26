@@ -344,6 +344,29 @@ function Reveal({
   )
 }
 
+/** Fades/slides in on mount rather than on scroll — for above-the-fold content like the hero. */
+function Entrance({
+  children,
+  className = '',
+  delay = 0,
+  direction = 'up',
+}: {
+  children: React.ReactNode
+  className?: string
+  delay?: number
+  direction?: 'up' | 'down'
+}) {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), delay)
+    return () => clearTimeout(t)
+  }, [delay])
+
+  const base = direction === 'down' ? 'reveal-down' : 'reveal'
+  return <div className={`${base} ${visible ? 'is-visible' : ''} ${className}`}>{children}</div>
+}
+
 /* ─── nav ───────────────────────────────────────────────────── */
 
 function Nav({ scrolled }: { scrolled: boolean }) {
@@ -371,14 +394,21 @@ function Nav({ scrolled }: { scrolled: boolean }) {
         scrolled || open ? 'bg-[#0B0B0D]/95 backdrop-blur-sm border-b border-[#1A1A1E]' : 'bg-transparent'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 lg:px-12 h-16 flex items-center justify-between">
+      <Entrance
+        direction="down"
+        className="max-w-7xl mx-auto px-6 lg:px-12 h-16 flex items-center justify-between"
+      >
         <a
           href="#hero"
           className="flex items-center gap-2 group"
           style={{ fontFamily: 'Rajdhani, sans-serif' }}
           onClick={() => setOpen(false)}
         >
-          <img src={logo} alt="Last Game" className="w-9 h-9 object-contain" />
+          <img
+            src={logo}
+            alt="Last Game"
+            className="w-9 h-9 object-contain transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6"
+          />
           <span className="text-sm font-medium text-[#555] tracking-widest uppercase group-hover:text-[#888] transition-colors">
             Last Game
           </span>
@@ -388,10 +418,11 @@ function Nav({ scrolled }: { scrolled: boolean }) {
             <a
               key={item}
               href={`#${item.toLowerCase()}`}
-              className="text-xs tracking-widest uppercase text-[#555] hover:text-[#E8E8E6] transition-colors duration-200"
+              className="relative py-2 text-xs tracking-widest uppercase text-[#555] hover:text-[#E8E8E6] transition-colors duration-200 group/navlink"
               style={{ fontFamily: 'DM Mono, monospace' }}
             >
               {item}
+              <span className="absolute left-0 -bottom-0.5 h-px w-0 bg-[#C9A227] transition-all duration-300 group-hover/navlink:w-full" />
             </a>
           ))}
         </div>
@@ -429,7 +460,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
             />
           </button>
         </div>
-      </div>
+      </Entrance>
 
       {/* mobile menu panel */}
       <div
@@ -481,7 +512,7 @@ function Hero() {
       />
 
       <div className="relative z-10 max-w-4xl mx-auto">
-        <div className="mb-8">
+        <Entrance className="mb-8">
           <img
             src={logo}
             alt="Last Game"
@@ -493,29 +524,33 @@ function Hero() {
           >
             Last Game
           </div>
-        </div>
+        </Entrance>
 
-        <div className="flex items-center justify-center gap-4 mb-10">
+        <Entrance delay={150} className="flex items-center justify-center gap-4 mb-10">
           <div className="w-16 h-px bg-[#232328]" />
           <div className="w-1.5 h-1.5 bg-[#C9A227] rotate-45" />
           <div className="w-16 h-px bg-[#232328]" />
-        </div>
+        </Entrance>
 
-        <p
-          className="text-[clamp(20px,3.5vw,32px)] font-light text-[#E8E8E6] leading-snug mb-4 tracking-wide"
-          style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 300 }}
-        >
-          Six divisions. One family.
-          <br />
-          <span className="text-[#666]">Play together. Grow together.</span>
-        </p>
+        <Entrance delay={280}>
+          <p
+            className="text-[clamp(20px,3.5vw,32px)] font-light text-[#E8E8E6] leading-snug mb-4 tracking-wide"
+            style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 300 }}
+          >
+            Six divisions. One family.
+            <br />
+            <span className="text-[#666]">Play together. Grow together.</span>
+          </p>
+        </Entrance>
 
-        <p className="text-sm text-[#555] mb-12 max-w-md mx-auto leading-relaxed">
-          A friendly multi-game community for players who want to compete, laugh, and grow together
-          — across every platform, every title.
-        </p>
+        <Entrance delay={400}>
+          <p className="text-sm text-[#555] mb-12 max-w-md mx-auto leading-relaxed">
+            A friendly multi-game community for players who want to compete, laugh, and grow
+            together — across every platform, every title.
+          </p>
+        </Entrance>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <Entrance delay={520} className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
             href="#tryouts"
             className="px-8 py-3.5 bg-[#C9A227] text-[#0B0B0D] text-sm font-bold tracking-[0.2em] uppercase hover:bg-[#dbb82f] transition-colors duration-200"
@@ -530,7 +565,7 @@ function Hero() {
           >
             View Teams
           </a>
-        </div>
+        </Entrance>
       </div>
 
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-30">
