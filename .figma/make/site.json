@@ -1,12 +1,12 @@
 {
-  "title": "Figma Make App",
+  "title": "Last Game",
   "description": "",
   "language": "en",
   "robots": {
     "index": true
   },
   "icons": {
-    "icon": ""
+    "icon": "/favicon.png"
   },
   "openGraph": {
     "image": ""
