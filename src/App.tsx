@@ -5,6 +5,13 @@ import teamOriginal from './Images/ORIGINAL.jpg'
 import teamReborn from './Images/749981256_1582934506531124_7454687730703426001_n.jpg'
 import teamWarzie from './Images/WARZIE.jpg'
 import teamAether from './Images/MOBILE-LEGENDS.jpg'
+import adminKambajon from './Images/admin-kambajon.jpeg'
+import adminPapaV from './Images/admin-papav.jpeg'
+import adminKenichi from './Images/admin-kenichi.jpeg'
+import adminKate from './Images/admin-kate.jpeg'
+import adminBroker from './Images/admin-broker.jpeg'
+import adminWhiskey from './Images/admin-whiskey.jpeg'
+import newsGreenNotice from './Images/green-notice.jpg'
 
 /* ─── data ─────────────────────────────────────────────────── */
 
@@ -15,6 +22,8 @@ const teams = [
     tag: 'Battle Royale',
     game: 'CODM BR',
     desc: 'The founding division. Built on precision, forged in the original battle royale arena.',
+    about:
+      "With 119 members and counting managed by seven (7) LG Admins, Original Clan is the epitome of success of Last Game's long history in Call of Duty. Started in 2020, OG Clan became the original home of old-timey gamers, heavily skilled in battle royale games in Call of Duty Mobile.",
     active: true,
     image: teamOriginal,
   },
@@ -24,6 +33,8 @@ const teams = [
     tag: 'Multiplayer',
     game: 'CODM MP',
     desc: 'Fast rotations, sharp aim, relentless aggression. The MP flagship.',
+    about:
+      "With 81 members and counting managed by eight (8) LG Admins, Reborn Clan houses members skilled in multiplayer games in Call of Duty Mobile. Started in mid-2024, RB Clan remains qualified and afloat, ready to fight in combat in a moment's notice.",
     active: true,
     image: teamReborn,
   },
@@ -33,6 +44,8 @@ const teams = [
     tag: 'Warzone',
     game: 'Warzone',
     desc: 'Drop, adapt, dominate. Our Warzone squad brings elite tactical play to every match.',
+    about:
+      'WarZie Clan holds the largest number of members with 200 registered gamers all over the world managed by two (2) LG Admins divided into three (3) sections. Started in early 2023, WZ Clan houses members skilled in Call of Duty - Warzone.',
     active: true,
     image: teamWarzie,
   },
@@ -42,6 +55,8 @@ const teams = [
     tag: 'Open World',
     game: 'Open World Gameplay',
     desc: 'Explorers and strategists. Pushing the boundaries of what open-world competition looks like.',
+    about:
+      'With 50 newly registered members, HighRise will house members interested in playing open world PC games such as GTA V Roleplays and BF Siege. HighRise is the sister-clan of WarZie, where members can explore and become creative - in a place with limitless possibilities.',
     active: true,
     image: null,
   },
@@ -51,6 +66,8 @@ const teams = [
     tag: 'Mobile MOBA',
     game: 'Mobile Legends',
     desc: 'Mobile excellence. Aether competes at the highest tier of Mobile Legends Bang Bang.',
+    about:
+      "Started in mid-2026, Aether Clan will house members specialized in Mobile Legends Bang Bang. Aether is the product of Last Game's plan to expand its territories in other gaming domains.",
     active: true,
     image: teamAether,
   },
@@ -60,52 +77,52 @@ const teams = [
     tag: 'Roblox Division',
     game: 'Roblox',
     desc: 'A new frontier. LG is expanding into Roblox — more details coming soon.',
+    about:
+      'Soon to open, LG RIOT will house members interested in playing open world NON-PC games, such as Roblox and Minecraft.',
     active: false,
     image: null,
   },
 ]
 
 const milestones = [
-  { year: '2019', month: 'Oct', title: 'CODM Launches — Kambajon Starts', desc: 'CODM is now available to download on Play/Appstore.' },
-  { year: '2019', month: 'Dec', title: 'First & Original Squad', desc: 'Kambajon, Jhiro, Lyric, Aleitheisa' },
+  { year: '2019', month: 'Oct', title: 'Call of Duty Mobile Is Ready to Download in App Store', desc: '' },
+  { year: '2019', month: 'Dec', title: 'First & Original Squad', desc: 'Kambajon, Shiro, Lyric, Alesthesia' },
 
   { year: '2020', month: 'Mar', title: 'Global Pandemic Announced', desc: '' },
-  { year: '2020', month: 'May', title: 'DU Clan', desc: 'Kambajon, Jhiro, Lyric, Aleitheisa' },
-  { year: '2020', month: 'Jun', title: 'Life After Game', desc: 'Jhidorima, Onyx, Lie, Rance, Paita, Xaolie, Che, Adouche, Mayora, etc.' },
-  { year: '2020', month: 'Oct', title: 'Left DU Clan', desc: 'Kambajon, Jhiro, Lyric, Aleitheisa' },
-  { year: '2020', month: 'Oct', title: 'Jigra Clan', desc: 'Papav, Whikey, Badajs, Papadie' },
+  { year: '2020', month: 'Jun 16', title: 'Last Game Is Born — OG Squad Assembled', desc: 'Kambajon, Rency, Shidorima, Montach, Draken, Patatas, Cheas, etc.', featured: true },
+  { year: '2020', month: 'Dec', title: 'LG Celebrates 1st Christmas Party', desc: '' },
 
-  { year: '2021', month: 'Feb', title: 'Left Jigra Clan', desc: 'Papav, Whikey, Badajs, Papadie' },
-  { year: '2021', month: 'Jun', title: 'Birth of LG Clan', desc: 'Jhidorima, Onyx, Liejhon, Rance, Paita, Jomini, Badajs, Papadie, etc.', featured: true },
-  { year: '2021', month: 'Dec', title: '1st Christmas Party — BR: The Floor Is Lava', desc: 'LG Clan Members 2021' },
+  { year: '2021', month: 'Jan', title: 'Last Game Joins Scrims & Tournaments', desc: '', featured: true },
+  { year: '2021', month: 'Jun', title: 'LG Celebrates 1st Clan Anniversary', desc: '', featured: true },
+  { year: '2021', month: 'Jul', title: '1st Clan Event — The Floor Is Lava', desc: '', featured: true },
+  { year: '2021', month: 'Dec', title: '2nd Christmas Party', desc: '' },
 
-  { year: '2022', month: 'Jan', title: 'LG Clan Enters Open Scrims & Tournaments', desc: 'LG Clan Members 2021' },
-  { year: '2022', month: 'Jun', title: '1st LG Clan Anniversary', desc: 'LG Clan Members 2021–2022' },
-  { year: '2022', month: 'Jul', title: 'Start of Clan Dares, Events, Minigames & Prize System', desc: 'LG Clan Members 2021–2022' },
-  { year: '2022', month: 'Oct', title: '1st LG Clan Event — BR: Hide & Seek', desc: 'LG Clan Members 2021–2022' },
-  { year: '2022', month: 'Nov', title: '1st LG Clan Recruitment — +50 Members', desc: 'Neil, Whikey, Nanemi, Mavv, Cavandieh, Eajy, etc.' },
-  { year: '2022', month: 'Dec', title: 'LG Minecraft Adventure', desc: 'Kambajon, Jhidorima, Liejhon, Trixia' },
-  { year: '2022', month: 'Dec', title: '2022 Christmas Party', desc: 'LG Clan Members 2021–2022 · Collab with ADMU Clan' },
+  { year: '2022', month: 'Jan', title: 'LG Minecraft & Last Island Adventures', desc: '', featured: true },
+  { year: '2022', month: 'Mar', title: 'LG Creates "Clan Dares"', desc: '', featured: true },
 
-  { year: '2023', month: 'Feb', title: 'LG Clan vs. Sister Clans — Major Clan Issue', desc: 'Kambajon v. 4 Clan Masters — EDV, ELV, DKX, REQ' },
-  { year: '2023', month: 'May', title: 'LG Clan Went Silent; Morale Went Down', desc: 'LG Clan Members 2021–2023' },
-  { year: '2023', month: 'Jun', title: '2nd LG Clan Anniversary', desc: 'LG Clan Members 2021–2023' },
-  { year: '2023', month: 'Jul', title: 'More Members Left LG Clan', desc: 'LG Clan Members 2021–2023' },
-  { year: '2023', month: 'Nov', title: 'End of LG Minecraft Adventure', desc: 'Kambajon, Jhidorima, Liejhon, Trixia' },
-  { year: '2023', month: 'Dec', title: 'No Christmas Party', desc: 'LG Clan Members 2021–2023' },
+  { year: '2023', month: 'Feb', title: 'LG WarZie Is Born — LG Reaches 80 Members', desc: 'Kambajon, Kate, Whiskey, PapaV, PapaDoe, PapaKit, XaioLie, Neil, Mavy, etc.', featured: true },
+  { year: '2023', month: 'Mar', title: 'First WZ Clan War', desc: 'LG WarZie Clan', featured: true },
+  { year: '2023', month: 'Mar', title: 'LG Creates "Mega Dares" — Kill a Live Streamer', desc: '', featured: true },
+  { year: '2023', month: 'Apr', title: 'LG vs. Sister-Clans — A Major Clan Issue', desc: '"The scar of the issue has taught Last Game the importance of keeping a low profile, which we still practice up to date."' },
+  { year: '2023', month: 'Dec', title: 'Last Game — Original Squad First Meet Up', desc: 'Kambajon, Draken, Trixia' },
 
-  { year: '2024', month: 'Jan', title: 'Birth of LG Warzone', desc: 'Whikey, Neil, Padolin, Delk, Racune + LA Group' },
-  { year: '2024', month: 'Jun', title: '3rd LG Clan Anniversary', desc: 'LG Clan Members 2023–2024' },
-  { year: '2024', month: 'Jul', title: 'Birth of LG MP Mains', desc: 'Bella, Quirin, Lido, Ricel, Ely, Wercha, Cheryn, Ehie, Junhel, Sam, Genkol, Larry + Unemployed Group, etc.' },
-  { year: '2024', month: 'Dec', title: '2024 Christmas Party / End of LG Clan', desc: 'LG Clan Members 2021–2024' },
-  { year: '2024', month: 'Dec', title: 'LG Clan Disbands', desc: '', featured: true },
+  { year: '2024', month: 'Jan', title: 'LG Support Group Is Born', desc: 'Kambajon, Neil', featured: true },
+  { year: '2024', month: 'Feb', title: 'LG Reborn Is Born — Room for MP Players', desc: 'Bels, Quinn, Luna, Kioshi, Leslie, Kier, August, Ickin, Jaypol, Larry, Unemployed Group, etc.', featured: true },
+  { year: '2024', month: 'Jun', title: 'LG Celebrates 4th Clan Anniversary', desc: '' },
+  { year: '2024', month: 'Jul', title: 'First Mass Recruitment — LG Reaches 100+ Members', desc: 'Sey, Oro, Peanut, Weecha, Bia, Coffee, Echo, Amir, Shobe, Toji, PopDio, Notorious, etc.', featured: true },
+  { year: '2024', month: 'Dec', title: '3rd Christmas Party — LG Celebrates Its Expansion & Welcomes New Members', desc: '', featured: true },
 
-  { year: '2025', month: 'Mar', title: 'Clan Admins Proposed — LG Clan Resumes', desc: 'Members proposed Clan Admins to continue the clan.' },
-  { year: '2025', month: 'Jun', title: '4th LG Clan Anniversary', desc: 'LG Clan Members 2021–2024' },
-  { year: '2025', month: 'Jul', title: '2nd LG Clan Recruitment — +400 Members', desc: 'El, Nova, Rai, Join, Yuri, Renko, Inzhagi, Ryu, Freyaa, etc.' },
-  { year: '2025', month: 'Aug', title: 'Start of Scrim Dares, Mega Dares & New Minigames', desc: 'LG Clan Members 2021–2025' },
-  { year: '2025', month: 'Sep', title: 'LG Clan Resumes Scrims', desc: '' },
-  { year: '2025', month: 'Present', title: 'LG Clan Continues...', desc: '', featured: true },
+  { year: '2025', month: 'Jun', title: 'LG Celebrates 5th Clan Anniversary', desc: '' },
+  { year: '2025', month: 'Jul', title: 'Second Mass Recruitment — LG Reaches 300+ Members', desc: 'Elyzza, Freyaa, Novaasin, Josh, Rai, Yuri, Inzhagi, Renko, Ryu, Chang, Obito, etc.', featured: true },
+  { year: '2025', month: 'Jul', title: 'LG Admin Is Established', desc: 'Formed to accommodate the rising population — Clan Masters, Vice Clan Masters, Clan Managers & Clan Treasurer.', featured: true },
+  { year: '2025', month: 'Aug', title: 'LG Creates "Scrim Dares"', desc: '', featured: true },
+  { year: '2025', month: 'Sep', title: 'First MP Scrimmage', desc: 'LG Reborn Clan', featured: true },
+  { year: '2025', month: 'Nov', title: 'First BR Scrimmage', desc: 'LG Original Clan', featured: true },
+  { year: '2025', month: 'Dec', title: '4th Christmas Party — New Admins, New Members & New Opportunities', desc: '', featured: true },
+
+  { year: '2026', month: 'Jun', title: 'LG Celebrates 6th Clan Anniversary — LG Reaches 600+ Members', desc: '', featured: true },
+  { year: '2026', month: 'Jun', title: 'LG Support Group Officially Withdraws From Last Game', desc: '', featured: true },
+  { year: '2026', month: 'Jul', title: 'LG Aether & LG Highrise Are Born', desc: '-members to follow-', featured: true },
 ]
 
 const events = [
@@ -153,50 +170,57 @@ const events = [
 
 const staff = [
   {
-    name: 'Zephyr',
-    role: 'Founder & Head Admin',
+    name: 'Kambajon',
+    role: 'Founder',
     division: 'Organization',
-    photo:
-      'https://images.unsplash.com/photo-1758534063829-a72058381e21?w=160&h=160&fit=crop&auto=format',
+    photo: adminKambajon,
   },
   {
-    name: 'Kova',
-    role: 'Co-Founder & Operations',
-    division: 'Organization',
-    photo:
-      'https://images.unsplash.com/photo-1758535768411-13b8802d6731?w=160&h=160&fit=crop&auto=format',
-  },
-  {
-    name: 'Draven',
-    role: 'Division Admin — BR',
+    name: 'Papa V',
+    role: 'LG Original Clan Master',
     division: 'LG Original',
-    photo:
-      'https://images.unsplash.com/photo-1638290047807-4c9d389b9aa6?w=160&h=160&fit=crop&auto=format',
+    photo: adminPapaV,
   },
   {
-    name: 'Sable',
-    role: 'Division Admin — MP',
+    name: 'Kenichi',
+    role: 'LG Reborn Clan Master',
     division: 'LG Reborn',
-    photo:
-      'https://images.unsplash.com/photo-1774897778836-3b13763e71b3?w=160&h=160&fit=crop&auto=format',
+    photo: adminKenichi,
   },
   {
-    name: 'Mikael',
-    role: 'Division Admin — WZ',
+    name: 'Kate',
+    role: 'LG Warzie Clan Master',
     division: 'LG Warzie',
-    photo:
-      'https://images.unsplash.com/photo-1627890458144-4c0c481bf4b8?w=160&h=160&fit=crop&auto=format',
+    photo: adminKate,
   },
   {
-    name: 'Lyra',
-    role: 'Division Admin — ML',
+    name: 'Broker',
+    role: 'LG Aether Clan Master',
     division: 'LG Aether',
-    photo:
-      'https://images.unsplash.com/photo-1764546899196-b53061b1b609?w=160&h=160&fit=crop&auto=format',
+    photo: adminBroker,
+  },
+  {
+    name: 'Whiskey',
+    role: 'LG Highrise Clan Master',
+    division: 'LG Highrise',
+    photo: adminWhiskey,
   },
 ]
 
 const news = [
+  {
+    id: 5,
+    headline: 'Green Notice — LG Community Resumes Normal Operations',
+    excerpt: 'Nothing to see here — Last Game Community has resumed normal operations.',
+    body: [
+      'Last Game is issuing a Green Notice: nothing to see here — Last Game Community has resumed normal operations.',
+      'All scrims, events, and clan activities are proceeding as scheduled across every division.',
+    ],
+    date: 'Aug 1, 2026',
+    tag: 'Organization',
+    thumb: newsGreenNotice,
+    containThumb: true,
+  },
   {
     id: 1,
     headline: 'LG Aether Qualifies for SEA Regional Championship',
@@ -371,6 +395,7 @@ function Entrance({
 
 function Nav({ scrolled }: { scrolled: boolean }) {
   const [open, setOpen] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(false)
   const navItems = ['Teams', 'Milestones', 'Events', 'News', 'Rules', 'Admin']
 
   useEffect(() => {
@@ -427,13 +452,20 @@ function Nav({ scrolled }: { scrolled: boolean }) {
           ))}
         </div>
         <div className="flex items-center gap-4">
-          <a
-            href="#tryouts"
-            className="hidden md:inline-flex text-xs tracking-widest uppercase px-5 py-2.5 border border-[#C9A227] text-[#C9A227] hover:bg-[#C9A227] hover:text-[#0B0B0D] transition-all duration-200 font-semibold"
-            style={{ fontFamily: 'DM Mono, monospace' }}
+          <div
+            className="relative hidden md:block"
+            onMouseEnter={() => setAdminOpen(true)}
+            onMouseLeave={() => setAdminOpen(false)}
           >
-            Try Out
-          </a>
+            <button
+              type="button"
+              className="inline-flex text-xs tracking-widest uppercase px-5 py-2.5 border border-[#C9A227] text-[#C9A227] hover:bg-[#C9A227] hover:text-[#0B0B0D] transition-all duration-200 font-semibold"
+              style={{ fontFamily: 'DM Mono, monospace' }}
+            >
+              Admin Log In
+            </button>
+            <AdminPopover open={adminOpen} />
+          </div>
 
           {/* burger toggle — mobile only */}
           <button
@@ -465,7 +497,7 @@ function Nav({ scrolled }: { scrolled: boolean }) {
       {/* mobile menu panel */}
       <div
         className={`md:hidden overflow-hidden transition-all duration-300 ease-out bg-[#0B0B0D]/98 backdrop-blur-sm border-b border-[#1A1A1E] ${
-          open ? 'max-h-[420px]' : 'max-h-0 border-b-0'
+          open ? (adminOpen ? 'max-h-[700px]' : 'max-h-[420px]') : 'max-h-0 border-b-0'
         }`}
       >
         <div className="flex flex-col px-6 py-4">
@@ -480,17 +512,57 @@ function Nav({ scrolled }: { scrolled: boolean }) {
               {item}
             </a>
           ))}
-          <a
-            href="#tryouts"
-            onClick={() => setOpen(false)}
-            className="mt-5 mb-2 text-center text-xs tracking-widest uppercase px-5 py-3 border border-[#C9A227] text-[#C9A227] hover:bg-[#C9A227] hover:text-[#0B0B0D] transition-all duration-200 font-semibold"
+          <button
+            type="button"
+            onClick={() => setAdminOpen((v) => !v)}
+            className="w-full mt-5 mb-2 text-center text-xs tracking-widest uppercase px-5 py-3 border border-[#C9A227] text-[#C9A227] hover:bg-[#C9A227] hover:text-[#0B0B0D] transition-all duration-200 font-semibold"
             style={{ fontFamily: 'DM Mono, monospace' }}
           >
-            Try Out
-          </a>
+            Admin Log In
+          </button>
+          <AdminPopoverContent
+            className={`overflow-hidden transition-all duration-300 ${adminOpen ? 'max-h-60 opacity-100 mt-3' : 'max-h-0 opacity-0'}`}
+          />
         </div>
       </div>
     </nav>
+  )
+}
+
+function AdminPopover({ open }: { open: boolean }) {
+  return (
+    <AdminPopoverContent
+      className={`absolute right-0 top-full mt-3 w-80 max-w-[90vw] shadow-2xl origin-top-right transition-all duration-200 z-50 ${
+        open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
+      }`}
+    />
+  )
+}
+
+function AdminPopoverContent({ className }: { className: string }) {
+  return (
+    <div className={className}>
+      <div className="bg-[#0D0D10] border border-[#1E1E23] p-6">
+        <div
+          className="inline-block text-[9px] tracking-[0.25em] uppercase text-[#C9A227] border border-[#C9A22730] bg-[#C9A22715] px-2.5 py-1 mb-4"
+          style={{ fontFamily: 'DM Mono, monospace' }}
+        >
+          Coming Soon
+        </div>
+
+        <h3
+          className="text-lg font-bold leading-none text-[#E8E8E6] mb-2"
+          style={{ fontFamily: 'Rajdhani, sans-serif' }}
+        >
+          Admin Dashboard
+        </h3>
+
+        <p className="text-xs text-[#666] leading-relaxed">
+          This is currently being enhanced. Soon, LG Admins will be able to manage divisions, post
+          news, and add or remove categories directly from here.
+        </p>
+      </div>
+    </div>
   )
 }
 
@@ -810,7 +882,17 @@ function TeamModal({ team, onClose }: { team: (typeof teams)[0]; onClose: () => 
 
         {team.image && (
           <div className="relative h-56 md:h-64 overflow-hidden bg-[#111115]">
-            <img src={team.image} alt={team.name} className="w-full h-full object-cover" />
+            <img
+              src={team.image}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40"
+            />
+            <img
+              src={team.image}
+              alt={team.name}
+              className="relative w-full h-full object-contain"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D10] via-transparent to-transparent" />
           </div>
         )}
@@ -845,7 +927,7 @@ function TeamModal({ team, onClose }: { team: (typeof teams)[0]; onClose: () => 
             </div>
           )}
 
-          <p className="text-sm text-[#666] leading-relaxed mb-8">{team.desc}</p>
+          <p className="text-sm text-[#666] leading-relaxed mb-8">{team.about ?? team.desc}</p>
 
           {admins.length > 0 && (
             <div className="mb-8">
@@ -1293,11 +1375,27 @@ function NewsCard({
     >
       {/* thumbnail */}
       <div className={`relative overflow-hidden bg-[#111115] ${featured ? 'h-52' : 'h-36'}`}>
-        <img
-          src={article.thumb}
-          alt={article.headline}
-          className={`w-full h-full object-cover transition-transform duration-700 ${hovered ? 'scale-105' : 'scale-100'}`}
-        />
+        {article.containThumb ? (
+          <>
+            <img
+              src={article.thumb}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40"
+            />
+            <img
+              src={article.thumb}
+              alt={article.headline}
+              className={`relative w-full h-full object-contain transition-transform duration-700 ${hovered ? 'scale-105' : 'scale-100'}`}
+            />
+          </>
+        ) : (
+          <img
+            src={article.thumb}
+            alt={article.headline}
+            className={`w-full h-full object-cover transition-transform duration-700 ${hovered ? 'scale-105' : 'scale-100'}`}
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B0D] via-[#0B0B0D]/30 to-transparent" />
         <div className="absolute top-4 left-4">
           <span
@@ -1375,7 +1473,23 @@ function NewsModal({ article, onClose }: { article: (typeof news)[0]; onClose: (
         </button>
 
         <div className="relative h-56 md:h-72 overflow-hidden bg-[#111115]">
-          <img src={article.thumb} alt={article.headline} className="w-full h-full object-cover" />
+          {article.containThumb ? (
+            <>
+              <img
+                src={article.thumb}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40"
+              />
+              <img
+                src={article.thumb}
+                alt={article.headline}
+                className="relative w-full h-full object-contain"
+              />
+            </>
+          ) : (
+            <img src={article.thumb} alt={article.headline} className="w-full h-full object-cover" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D10] via-transparent to-transparent" />
           <div className="absolute top-4 left-4">
             <span
@@ -1607,8 +1721,8 @@ export default function App() {
       <Teams />
       <Milestones />
       <Events />
-      <Staff />
       <News />
+      <Staff />
       <Rules />
       <TryoutsCTA />
       <Footer />
