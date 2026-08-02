@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { User } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
+import { db } from './firebase'
 import logo from './Images/LOGO-removebg-preview.png'
+import teamOriginal from './Images/ORIGINAL.jpg'
+import teamReborn from './Images/749981256_1582934506531124_7454687730703426001_n.jpg'
+import teamWarzie from './Images/WARZIE.jpg'
+import teamAether from './Images/MOBILE-LEGENDS.jpg'
+import adminKambajon from './Images/admin-kambajon.jpeg'
+import adminPapaV from './Images/admin-papav.jpeg'
+import adminKenichi from './Images/admin-kenichi.jpeg'
+import adminKate from './Images/admin-kate.jpeg'
+import adminBroker from './Images/admin-broker.jpeg'
+import adminWhiskey from './Images/admin-whiskey.jpeg'
+import newsGreenNotice from './Images/green-notice.jpg'
 import {
   useStore,
   genId,
@@ -15,6 +28,29 @@ import {
   type NewsArticle,
   type RuleItem,
 } from './store'
+
+/* ─── one-time repair: local dev-only image paths that leaked into Firestore ─ */
+
+const LOCAL_IMAGE_MAP: Record<string, string> = {
+  'ORIGINAL.jpg': teamOriginal,
+  '749981256_1582934506531124_7454687730703426001_n.jpg': teamReborn,
+  'WARZIE.jpg': teamWarzie,
+  'MOBILE-LEGENDS.jpg': teamAether,
+  'admin-kambajon.jpeg': adminKambajon,
+  'admin-papav.jpeg': adminPapaV,
+  'admin-kenichi.jpeg': adminKenichi,
+  'admin-kate.jpeg': adminKate,
+  'admin-broker.jpeg': adminBroker,
+  'admin-whiskey.jpeg': adminWhiskey,
+  'green-notice.jpg': newsGreenNotice,
+}
+
+async function uploadLocalAssetToCloudinary(assetUrl: string): Promise<string> {
+  const res = await fetch(assetUrl)
+  const blob = await res.blob()
+  const file = new File([blob], assetUrl.split('/').pop() ?? 'image.jpg', { type: blob.type })
+  return uploadToCloudinary(file)
+}
 
 /* ─── cloudinary (unsigned upload — no secret needed client-side) ─ */
 
@@ -554,6 +590,90 @@ function Badge({ tone, children }: { tone: 'gold' | 'green' | 'muted'; children:
 
 /* ─── dashboard ──────────────────────────────────────────────── */
 
+interface BrokenImage {
+  collection: 'divisions' | 'staff' | 'news'
+  id: string
+  field: 'image' | 'photo' | 'thumb'
+  label: string
+  url: string
+}
+
+function RepairImagesPanel() {
+  const { divisions, staff, news } = useStore()
+  const [running, setRunning] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+
+  const broken: BrokenImage[] = useMemo(() => {
+    const items: BrokenImage[] = []
+    for (const d of divisions) {
+      if (d.image && !d.image.startsWith('http')) {
+        items.push({ collection: 'divisions', id: d.id, field: 'image', label: d.name, url: d.image })
+      }
+    }
+    for (const s of staff) {
+      if (s.photo && !s.photo.startsWith('http')) {
+        items.push({ collection: 'staff', id: s.id, field: 'photo', label: s.name, url: s.photo })
+      }
+    }
+    for (const n of news) {
+      if (n.thumb && !n.thumb.startsWith('http')) {
+        items.push({ collection: 'news', id: n.id, field: 'thumb', label: n.headline, url: n.thumb })
+      }
+    }
+    return items
+  }, [divisions, staff, news])
+
+  if (broken.length === 0) return null
+
+  async function run() {
+    setRunning(true)
+    setError(null)
+    setProgress(0)
+    try {
+      for (const item of broken) {
+        const filename = item.url.split('/').pop() ?? ''
+        const asset = LOCAL_IMAGE_MAP[filename]
+        if (asset) {
+          const cloudUrl = await uploadLocalAssetToCloudinary(asset)
+          await setDoc(doc(db, item.collection, item.id), { [item.field]: cloudUrl }, { merge: true })
+        }
+        setProgress((p) => p + 1)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Repair failed. Try again.')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <div className="border border-[#c25c5c30] bg-[#c25c5c08] p-6 mb-8">
+      <div
+        className="inline-block text-[9px] tracking-[0.25em] uppercase text-[#c25c5c] border border-[#c25c5c30] bg-[#c25c5c15] px-2.5 py-1 mb-4"
+        style={{ fontFamily: 'DM Mono, monospace' }}
+      >
+        {broken.length} Broken Image{broken.length === 1 ? '' : 's'}
+      </div>
+      <h3
+        className="text-lg font-bold text-[#E8E8E6] mb-2"
+        style={{ fontFamily: 'Rajdhani, sans-serif' }}
+      >
+        Some images point to local dev paths
+      </h3>
+      <p className="text-sm text-[#888] leading-relaxed mb-5 max-w-2xl">
+        These were imported from a browser that had local file paths instead of real image URLs —
+        they work on your machine's dev server but break once deployed. This re-uploads the
+        original images to Cloudinary and fixes the affected records.
+      </p>
+      <button type="button" onClick={run} disabled={running} className={`${btnGold} disabled:opacity-60`}>
+        {running ? `Fixing… (${progress}/${broken.length})` : `Fix ${broken.length} Image${broken.length === 1 ? '' : 's'}`}
+      </button>
+      {error && <p className="text-xs text-[#c25c5c] mt-3">{error}</p>}
+    </div>
+  )
+}
+
 function ImportDataBanner() {
   const { importLocalDataToFirestore, seedDefaultsToFirestore } = useStore()
   const [busy, setBusy] = useState<'local' | 'defaults' | null>(null)
@@ -633,6 +753,7 @@ function Dashboard({ onNavigate }: { onNavigate: (m: ModuleId) => void }) {
         description="A snapshot of everything on the public site. Click any card to jump to that module."
       />
       {!hasAnyData && <ImportDataBanner />}
+      <RepairImagesPanel />
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-[#1A1A1E]">
         {cards.map((c) => (
           <button
