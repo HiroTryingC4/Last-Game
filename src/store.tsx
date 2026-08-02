@@ -618,13 +618,25 @@ export function adminLogout(): Promise<void> {
   return signOut(auth)
 }
 
+export type AdminRole = 'head' | 'admin'
+
+export interface AdminAccess {
+  role: AdminRole
+}
+
 // Creates the account on a separate, isolated Firebase app instance so it
 // never touches (or replaces) the currently signed-in admin's session, then
 // adds it to the `admins` allowlist so it's actually allowed to log in.
-export async function createAdminAccount(email: string, password: string): Promise<void> {
+// Only a head admin can actually complete this — enforced by the Firestore
+// security rules on the `admins` collection, not just the UI hiding the form.
+export async function createAdminAccount(
+  email: string,
+  password: string,
+  role: AdminRole,
+): Promise<void> {
   const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password)
   await signOut(secondaryAuth)
-  await setDoc(doc(db, 'admins', cred.user.uid), { email, addedAt: new Date().toISOString() })
+  await setDoc(doc(db, 'admins', cred.user.uid), { email, role, addedAt: new Date().toISOString() })
 }
 
 export async function changeMyPassword(currentPassword: string, newPassword: string): Promise<void> {
@@ -637,8 +649,10 @@ export async function changeMyPassword(currentPassword: string, newPassword: str
 
 // The real access boundary: being a valid Firebase Auth user is not enough —
 // this checks the `admins` allowlist in Firestore (also enforced server-side
-// by the security rules, not just here).
-export async function isApprovedAdmin(uid: string): Promise<boolean> {
+// by the security rules, not just here) and returns their role.
+export async function getAdminAccess(uid: string): Promise<AdminAccess | null> {
   const snap = await getDoc(doc(db, 'admins', uid))
-  return snap.exists()
+  if (!snap.exists()) return null
+  const data = snap.data() as { role?: AdminRole }
+  return { role: data.role === 'head' ? 'head' : 'admin' }
 }

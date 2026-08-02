@@ -22,7 +22,8 @@ import {
   adminLogout,
   createAdminAccount,
   changeMyPassword,
-  isApprovedAdmin,
+  getAdminAccess,
+  type AdminRole,
   FullScreenLoader,
   type Division,
   type Milestone,
@@ -1220,6 +1221,7 @@ function CreateAdminForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [role, setRole] = useState<AdminRole>('admin')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -1238,11 +1240,12 @@ function CreateAdminForm() {
     }
     setBusy(true)
     try {
-      await createAdminAccount(email, password)
-      setSuccess(`Admin account created for ${email}. Share the password with them directly — they can change it once logged in.`)
+      await createAdminAccount(email, password, role)
+      setSuccess(`${role === 'head' ? 'Head admin' : 'Admin'} account created for ${email}. Share the password with them directly — they can change it once logged in.`)
       setEmail('')
       setPassword('')
       setConfirm('')
+      setRole('admin')
     } catch (err) {
       const code = err instanceof Error && 'code' in err ? String((err as { code: string }).code) : ''
       if (code === 'auth/email-already-in-use') setError('That email already has an account.')
@@ -1290,6 +1293,13 @@ function CreateAdminForm() {
           onChange={(e) => setConfirm(e.target.value)}
           required
         />
+      </div>
+      <div>
+        <label className={labelCls}>Role</label>
+        <select className={inputCls} value={role} onChange={(e) => setRole(e.target.value as AdminRole)}>
+          <option value="admin">Admin — can edit all content</option>
+          <option value="head">Head Admin — can also create &amp; revoke admins</option>
+        </select>
       </div>
       <button type="submit" disabled={busy} className={`${btnGold} disabled:opacity-60`}>
         {busy ? 'Creating…' : 'Create Admin Account'}
@@ -1384,10 +1394,11 @@ function ChangePasswordForm() {
 interface AdminProfile {
   uid: string
   email: string
+  role: AdminRole
   addedAt?: string
 }
 
-function AdminRoster() {
+function AdminRoster({ myRole }: { myRole: AdminRole }) {
   const [admins, setAdmins] = useState<AdminProfile[]>([])
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -1399,7 +1410,10 @@ function AdminRoster() {
       collection(db, 'admins'),
       (snap) => {
         setAdmins(
-          snap.docs.map((d) => ({ uid: d.id, ...(d.data() as { email: string; addedAt?: string }) })),
+          snap.docs.map((d) => {
+            const data = d.data() as { email: string; role?: AdminRole; addedAt?: string }
+            return { uid: d.id, email: data.email, addedAt: data.addedAt, role: data.role === 'head' ? 'head' : 'admin' }
+          }),
         )
         setLoaded(true)
       },
@@ -1436,11 +1450,12 @@ function AdminRoster() {
       <div className="border border-[#1A1A1E] divide-y divide-[#1A1A1E] max-w-xl">
         {admins.map((a) => (
           <div key={a.uid} className="flex items-center justify-between gap-4 px-5 py-3.5">
-            <span className="text-sm text-[#E8E8E6]">
+            <span className="text-sm text-[#E8E8E6] flex items-center gap-2.5">
               {a.email}
-              {a.uid === currentUid && <span className="text-[10px] text-[#555] ml-2">(you)</span>}
+              {a.role === 'head' && <Badge tone="gold">Head Admin</Badge>}
+              {a.uid === currentUid && <span className="text-[10px] text-[#555]">(you)</span>}
             </span>
-            {a.uid !== currentUid && (
+            {myRole === 'head' && a.uid !== currentUid && (
               <button
                 type="button"
                 onClick={() => revoke(a.uid)}
@@ -1458,37 +1473,64 @@ function AdminRoster() {
   )
 }
 
-function AccountModule() {
+function AccountModule({ myRole }: { myRole: AdminRole }) {
   return (
     <div>
       <ModuleHeader
         title="My Account"
-        description="See who has admin access, add new admins, or change your own password."
+        description={
+          myRole === 'head'
+            ? 'See who has admin access, add new admins, or change your own password.'
+            : 'Change your own password. Adding or removing admins is a Head Admin action.'
+        }
       />
       <div className="space-y-10">
-        <AdminRoster />
-        <div>
-          <h3
-            className="text-sm font-bold text-[#E8E8E6] mb-3"
-            style={{ fontFamily: 'Rajdhani, sans-serif' }}
+        <AdminRoster myRole={myRole} />
+
+        {myRole === 'head' && (
+          <div className="border-l-2 border-[#C9A227] pl-5">
+            <div
+              className="inline-block text-[9px] tracking-[0.25em] uppercase text-[#C9A227] border border-[#C9A22730] bg-[#C9A22715] px-2.5 py-1 mb-3"
+              style={{ fontFamily: 'DM Mono, monospace' }}
+            >
+              Head Admin Action
+            </div>
+            <h3
+              className="text-lg font-bold text-[#E8E8E6] mb-1.5"
+              style={{ fontFamily: 'Rajdhani, sans-serif' }}
+            >
+              Create New Admin
+            </h3>
+            <p className="text-xs text-[#666] mb-5 max-w-md leading-relaxed">
+              Grants full access to edit every division, milestone, event, news post, and setting
+              — and, if made a Head Admin, to create and revoke other admins too.
+            </p>
+            <CreateAdminForm />
+            <p className="text-[11px] text-[#555] max-w-xl leading-relaxed mt-4">
+              Revoking access from the roster above removes login rights immediately — it doesn't
+              delete their Firebase account outright, but they can no longer sign in to this panel.
+            </p>
+          </div>
+        )}
+
+        <div className="border-l-2 border-[#33333a] pl-5">
+          <div
+            className="inline-block text-[9px] tracking-[0.25em] uppercase text-[#888] border border-[#33333a] bg-white/[0.03] px-2.5 py-1 mb-3"
+            style={{ fontFamily: 'DM Mono, monospace' }}
           >
-            Create New Admin
-          </h3>
-          <CreateAdminForm />
-        </div>
-        <div>
+            Personal
+          </div>
           <h3
-            className="text-sm font-bold text-[#E8E8E6] mb-3"
+            className="text-lg font-bold text-[#E8E8E6] mb-1.5"
             style={{ fontFamily: 'Rajdhani, sans-serif' }}
           >
             Change My Password
           </h3>
+          <p className="text-xs text-[#666] mb-5 max-w-md leading-relaxed">
+            Only affects your own login — doesn't touch anyone else's access.
+          </p>
           <ChangePasswordForm />
         </div>
-        <p className="text-[11px] text-[#555] max-w-xl leading-relaxed">
-          Revoking access here removes login rights immediately — it doesn't delete their Firebase
-          account outright, but they can no longer sign in to this panel.
-        </p>
       </div>
     </div>
   )
@@ -1513,7 +1555,7 @@ function backToSite() {
   window.location.hash = ''
 }
 
-type Gate = 'loading' | 'unauthed' | 'rejected' | User
+type Gate = 'loading' | 'unauthed' | 'rejected' | { user: User; role: AdminRole }
 
 export default function AdminApp() {
   const [gate, setGate] = useState<Gate>('loading')
@@ -1526,9 +1568,9 @@ export default function AdminApp() {
         return
       }
       setGate('loading')
-      isApprovedAdmin(u.uid)
-        .then((approved) => {
-          if (approved) setGate(u)
+      getAdminAccess(u.uid)
+        .then((access) => {
+          if (access) setGate({ user: u, role: access.role })
           else {
             adminLogout()
             setGate('rejected')
@@ -1544,11 +1586,11 @@ export default function AdminApp() {
   if (gate === 'loading') return <FullScreenLoader />
   if (gate === 'rejected') {
     return (
-      <AdminLogin rejectedMessage="That account isn't an approved admin. Ask an existing admin to add you from their My Account tab." />
+      <AdminLogin rejectedMessage="That account isn't an approved admin. Ask a head admin to add you from their My Account tab." />
     )
   }
   if (gate === 'unauthed') return <AdminLogin />
-  const user = gate
+  const { user, role } = gate
 
   return (
     <div className="min-h-screen bg-[#0B0B0D] text-[#E8E8E6]">
@@ -1563,11 +1605,11 @@ export default function AdminApp() {
           </span>
         </div>
         <div className="flex items-center gap-3 sm:gap-4">
-          <span
-            className="hidden sm:inline text-[10px] text-[#555] whitespace-nowrap"
-            style={{ fontFamily: 'DM Mono, monospace' }}
-          >
-            {user.email}
+          <span className="hidden sm:flex items-center gap-2 whitespace-nowrap">
+            <span className="text-[10px] text-[#555]" style={{ fontFamily: 'DM Mono, monospace' }}>
+              {user.email}
+            </span>
+            {role === 'head' && <Badge tone="gold">Head Admin</Badge>}
           </span>
           <button
             type="button"
@@ -1614,7 +1656,7 @@ export default function AdminApp() {
         {active === 'staff' && <StaffManager />}
         {active === 'rules' && <RulesManager />}
         {active === 'settings' && <SiteSettingsForm />}
-        {active === 'account' && <AccountModule />}
+        {active === 'account' && <AccountModule myRole={role} />}
       </main>
     </div>
   )
