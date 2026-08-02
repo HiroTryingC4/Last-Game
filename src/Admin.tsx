@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { User } from 'firebase/auth'
-import { doc, setDoc } from 'firebase/firestore'
-import { db } from './firebase'
+import { doc, setDoc, collection, onSnapshot, deleteDoc } from 'firebase/firestore'
+import { db, auth } from './firebase'
 import logo from './Images/LOGO-removebg-preview.png'
 import teamOriginal from './Images/ORIGINAL.jpg'
 import teamReborn from './Images/749981256_1582934506531124_7454687730703426001_n.jpg'
@@ -22,6 +22,7 @@ import {
   adminLogout,
   createAdminAccount,
   changeMyPassword,
+  isApprovedAdmin,
   FullScreenLoader,
   type Division,
   type Milestone,
@@ -102,10 +103,10 @@ function firebaseAuthErrorMessage(err: unknown): string {
   return 'Incorrect email or password.'
 }
 
-function AdminLogin() {
+function AdminLogin({ rejectedMessage }: { rejectedMessage?: string }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(rejectedMessage ?? null)
   const [submitting, setSubmitting] = useState(false)
 
   async function submit(e: React.FormEvent) {
@@ -1380,14 +1381,92 @@ function ChangePasswordForm() {
   )
 }
 
+interface AdminProfile {
+  uid: string
+  email: string
+  addedAt?: string
+}
+
+function AdminRoster() {
+  const [admins, setAdmins] = useState<AdminProfile[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [revoking, setRevoking] = useState<string | null>(null)
+  const currentUid = auth.currentUser?.uid
+
+  useEffect(() => {
+    return onSnapshot(
+      collection(db, 'admins'),
+      (snap) => {
+        setAdmins(
+          snap.docs.map((d) => ({ uid: d.id, ...(d.data() as { email: string; addedAt?: string }) })),
+        )
+        setLoaded(true)
+      },
+      (err) => {
+        setError(err.message)
+        setLoaded(true)
+      },
+    )
+  }, [])
+
+  async function revoke(uid: string) {
+    if (uid === currentUid) return
+    if (!window.confirm("Revoke this admin's access? They will no longer be able to log in.")) return
+    setRevoking(uid)
+    try {
+      await deleteDoc(doc(db, 'admins', uid))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not revoke access. Try again.')
+    } finally {
+      setRevoking(null)
+    }
+  }
+
+  if (!loaded) return null
+
+  return (
+    <div>
+      <h3
+        className="text-sm font-bold text-[#E8E8E6] mb-3"
+        style={{ fontFamily: 'Rajdhani, sans-serif' }}
+      >
+        Current Admins
+      </h3>
+      <div className="border border-[#1A1A1E] divide-y divide-[#1A1A1E] max-w-xl">
+        {admins.map((a) => (
+          <div key={a.uid} className="flex items-center justify-between gap-4 px-5 py-3.5">
+            <span className="text-sm text-[#E8E8E6]">
+              {a.email}
+              {a.uid === currentUid && <span className="text-[10px] text-[#555] ml-2">(you)</span>}
+            </span>
+            {a.uid !== currentUid && (
+              <button
+                type="button"
+                onClick={() => revoke(a.uid)}
+                disabled={revoking === a.uid}
+                className={`px-3 py-1.5 disabled:opacity-60 ${btnDanger}`}
+              >
+                {revoking === a.uid ? 'Revoking…' : 'Revoke'}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      {error && <p className="text-xs text-[#c25c5c] mt-3">{error}</p>}
+    </div>
+  )
+}
+
 function AccountModule() {
   return (
     <div>
       <ModuleHeader
         title="My Account"
-        description="Add other admins, or change your own password."
+        description="See who has admin access, add new admins, or change your own password."
       />
       <div className="space-y-10">
+        <AdminRoster />
         <div>
           <h3
             className="text-sm font-bold text-[#E8E8E6] mb-3"
@@ -1407,8 +1486,8 @@ function AccountModule() {
           <ChangePasswordForm />
         </div>
         <p className="text-[11px] text-[#555] max-w-xl leading-relaxed">
-          To remove an admin's access, delete their account in the Firebase console
-          (Authentication → Users) — that part still needs to happen there, not here.
+          Revoking access here removes login rights immediately — it doesn't delete their Firebase
+          account outright, but they can no longer sign in to this panel.
         </p>
       </div>
     </div>
@@ -1434,14 +1513,42 @@ function backToSite() {
   window.location.hash = ''
 }
 
+type Gate = 'loading' | 'unauthed' | 'rejected' | User
+
 export default function AdminApp() {
-  const [user, setUser] = useState<User | null | 'loading'>('loading')
+  const [gate, setGate] = useState<Gate>('loading')
   const [active, setActive] = useState<ModuleId>('dashboard')
 
-  useEffect(() => subscribeAuth(setUser), [])
+  useEffect(() => {
+    return subscribeAuth((u) => {
+      if (!u) {
+        setGate('unauthed')
+        return
+      }
+      setGate('loading')
+      isApprovedAdmin(u.uid)
+        .then((approved) => {
+          if (approved) setGate(u)
+          else {
+            adminLogout()
+            setGate('rejected')
+          }
+        })
+        .catch(() => {
+          adminLogout()
+          setGate('rejected')
+        })
+    })
+  }, [])
 
-  if (user === 'loading') return <FullScreenLoader />
-  if (!user) return <AdminLogin />
+  if (gate === 'loading') return <FullScreenLoader />
+  if (gate === 'rejected') {
+    return (
+      <AdminLogin rejectedMessage="That account isn't an approved admin. Ask an existing admin to add you from their My Account tab." />
+    )
+  }
+  if (gate === 'unauthed') return <AdminLogin />
+  const user = gate
 
   return (
     <div className="min-h-screen bg-[#0B0B0D] text-[#E8E8E6]">
@@ -1456,6 +1563,12 @@ export default function AdminApp() {
           </span>
         </div>
         <div className="flex items-center gap-3 sm:gap-4">
+          <span
+            className="hidden sm:inline text-[10px] text-[#555] whitespace-nowrap"
+            style={{ fontFamily: 'DM Mono, monospace' }}
+          >
+            {user.email}
+          </span>
           <button
             type="button"
             onClick={backToSite}

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import {
   collection,
   doc,
+  getDoc,
   onSnapshot,
   setDoc,
   deleteDoc,
@@ -618,10 +619,12 @@ export function adminLogout(): Promise<void> {
 }
 
 // Creates the account on a separate, isolated Firebase app instance so it
-// never touches (or replaces) the currently signed-in admin's session.
+// never touches (or replaces) the currently signed-in admin's session, then
+// adds it to the `admins` allowlist so it's actually allowed to log in.
 export async function createAdminAccount(email: string, password: string): Promise<void> {
-  await createUserWithEmailAndPassword(secondaryAuth, email, password)
+  const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password)
   await signOut(secondaryAuth)
+  await setDoc(doc(db, 'admins', cred.user.uid), { email, addedAt: new Date().toISOString() })
 }
 
 export async function changeMyPassword(currentPassword: string, newPassword: string): Promise<void> {
@@ -630,4 +633,12 @@ export async function changeMyPassword(currentPassword: string, newPassword: str
   const credential = EmailAuthProvider.credential(user.email, currentPassword)
   await reauthenticateWithCredential(user, credential)
   await updatePassword(user, newPassword)
+}
+
+// The real access boundary: being a valid Firebase Auth user is not enough —
+// this checks the `admins` allowlist in Firestore (also enforced server-side
+// by the security rules, not just here).
+export async function isApprovedAdmin(uid: string): Promise<boolean> {
+  const snap = await getDoc(doc(db, 'admins', uid))
+  return snap.exists()
 }
