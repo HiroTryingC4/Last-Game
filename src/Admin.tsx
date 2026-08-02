@@ -20,6 +20,8 @@ import {
   subscribeAuth,
   adminLogin,
   adminLogout,
+  createAdminAccount,
+  changeMyPassword,
   FullScreenLoader,
   type Division,
   type Milestone,
@@ -1211,6 +1213,208 @@ function SiteSettingsForm() {
   )
 }
 
+/* ─── my account ─────────────────────────────────────────────── */
+
+function CreateAdminForm() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setSuccess(null)
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.')
+      return
+    }
+    if (password !== confirm) {
+      setError("Passwords don't match.")
+      return
+    }
+    setBusy(true)
+    try {
+      await createAdminAccount(email, password)
+      setSuccess(`Admin account created for ${email}. Share the password with them directly — they can change it once logged in.`)
+      setEmail('')
+      setPassword('')
+      setConfirm('')
+    } catch (err) {
+      const code = err instanceof Error && 'code' in err ? String((err as { code: string }).code) : ''
+      if (code === 'auth/email-already-in-use') setError('That email already has an account.')
+      else if (code === 'auth/invalid-email') setError('Enter a valid email address.')
+      else if (code === 'auth/weak-password') setError('Password is too weak — use at least 6 characters.')
+      else setError(err instanceof Error ? err.message : 'Could not create the account. Try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="max-w-xl space-y-5 border border-[#1E1E23] bg-[#0D0D10] p-6">
+      <div>
+        <label className={labelCls}>New Admin Email</label>
+        <input
+          type="email"
+          className={inputCls}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="clanmaster@lastgame.gg"
+          required
+        />
+      </div>
+      <div>
+        <label className={labelCls}>Temporary Password</label>
+        <input
+          type="text"
+          className={inputCls}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="At least 6 characters"
+          required
+        />
+        <p className="text-[11px] text-[#555] mt-1.5">
+          Shown in plain text on purpose — you'll need to hand this to them yourself.
+        </p>
+      </div>
+      <div>
+        <label className={labelCls}>Confirm Password</label>
+        <input
+          type="text"
+          className={inputCls}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          required
+        />
+      </div>
+      <button type="submit" disabled={busy} className={`${btnGold} disabled:opacity-60`}>
+        {busy ? 'Creating…' : 'Create Admin Account'}
+      </button>
+      {error && <p className="text-xs text-[#c25c5c]">{error}</p>}
+      {success && <p className="text-xs text-[#5FAE81] leading-relaxed">{success}</p>}
+    </form>
+  )
+}
+
+function ChangePasswordForm() {
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setSuccess(false)
+    if (next.length < 6) {
+      setError('New password must be at least 6 characters.')
+      return
+    }
+    if (next !== confirm) {
+      setError("New passwords don't match.")
+      return
+    }
+    setBusy(true)
+    try {
+      await changeMyPassword(current, next)
+      setSuccess(true)
+      setCurrent('')
+      setNext('')
+      setConfirm('')
+    } catch (err) {
+      const code = err instanceof Error && 'code' in err ? String((err as { code: string }).code) : ''
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setError('Current password is incorrect.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Could not update your password. Try again.')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="max-w-xl space-y-5 border border-[#1E1E23] bg-[#0D0D10] p-6">
+      <div>
+        <label className={labelCls}>Current Password</label>
+        <input
+          type="password"
+          className={inputCls}
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label className={labelCls}>New Password</label>
+        <input
+          type="password"
+          className={inputCls}
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+          placeholder="At least 6 characters"
+          required
+        />
+      </div>
+      <div>
+        <label className={labelCls}>Confirm New Password</label>
+        <input
+          type="password"
+          className={inputCls}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          required
+        />
+      </div>
+      <button type="submit" disabled={busy} className={`${btnGold} disabled:opacity-60`}>
+        {busy ? 'Updating…' : 'Update Password'}
+      </button>
+      {error && <p className="text-xs text-[#c25c5c]">{error}</p>}
+      {success && <p className="text-xs text-[#5FAE81]">Password updated.</p>}
+    </form>
+  )
+}
+
+function AccountModule() {
+  return (
+    <div>
+      <ModuleHeader
+        title="My Account"
+        description="Add other admins, or change your own password."
+      />
+      <div className="space-y-10">
+        <div>
+          <h3
+            className="text-sm font-bold text-[#E8E8E6] mb-3"
+            style={{ fontFamily: 'Rajdhani, sans-serif' }}
+          >
+            Create New Admin
+          </h3>
+          <CreateAdminForm />
+        </div>
+        <div>
+          <h3
+            className="text-sm font-bold text-[#E8E8E6] mb-3"
+            style={{ fontFamily: 'Rajdhani, sans-serif' }}
+          >
+            Change My Password
+          </h3>
+          <ChangePasswordForm />
+        </div>
+        <p className="text-[11px] text-[#555] max-w-xl leading-relaxed">
+          To remove an admin's access, delete their account in the Firebase console
+          (Authentication → Users) — that part still needs to happen there, not here.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 /* ─── shell ──────────────────────────────────────────────────── */
 
 const MODULES = [
@@ -1222,6 +1426,7 @@ const MODULES = [
   { id: 'staff', label: 'Admin Roster' },
   { id: 'rules', label: 'Rules' },
   { id: 'settings', label: 'Site Settings' },
+  { id: 'account', label: 'My Account' },
 ] as const
 type ModuleId = (typeof MODULES)[number]['id']
 
@@ -1296,6 +1501,7 @@ export default function AdminApp() {
         {active === 'staff' && <StaffManager />}
         {active === 'rules' && <RulesManager />}
         {active === 'settings' && <SiteSettingsForm />}
+        {active === 'account' && <AccountModule />}
       </main>
     </div>
   )

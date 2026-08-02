@@ -12,9 +12,13 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  createUserWithEmailAndPassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
   type User,
 } from 'firebase/auth'
-import { db, auth } from './firebase'
+import { db, auth, secondaryAuth } from './firebase'
 import teamOriginal from './Images/ORIGINAL.jpg'
 import teamReborn from './Images/749981256_1582934506531124_7454687730703426001_n.jpg'
 import teamWarzie from './Images/WARZIE.jpg'
@@ -611,4 +615,19 @@ export async function adminLogin(email: string, password: string): Promise<void>
 
 export function adminLogout(): Promise<void> {
   return signOut(auth)
+}
+
+// Creates the account on a separate, isolated Firebase app instance so it
+// never touches (or replaces) the currently signed-in admin's session.
+export async function createAdminAccount(email: string, password: string): Promise<void> {
+  await createUserWithEmailAndPassword(secondaryAuth, email, password)
+  await signOut(secondaryAuth)
+}
+
+export async function changeMyPassword(currentPassword: string, newPassword: string): Promise<void> {
+  const user = auth.currentUser
+  if (!user || !user.email) throw new Error('You must be logged in to change your password.')
+  const credential = EmailAuthProvider.credential(user.email, currentPassword)
+  await reauthenticateWithCredential(user, credential)
+  await updatePassword(user, newPassword)
 }
