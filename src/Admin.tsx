@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { User } from 'firebase/auth'
 import logo from './Images/LOGO-removebg-preview.png'
 import {
   useStore,
   genId,
-  isAdminAuthed,
-  tryAdminLogin,
+  subscribeAuth,
+  adminLogin,
   adminLogout,
+  FullScreenLoader,
   type Division,
   type Milestone,
   type EventItem,
@@ -54,16 +56,31 @@ function mono(children: React.ReactNode) {
 
 /* ─── login gate ────────────────────────────────────────────── */
 
-function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState(false)
+function firebaseAuthErrorMessage(err: unknown): string {
+  const code = err instanceof Error && 'code' in err ? String((err as { code: string }).code) : ''
+  if (code === 'auth/invalid-email') return 'Enter a valid email address.'
+  if (code === 'auth/too-many-requests') return 'Too many attempts. Wait a bit and try again.'
+  if (code === 'auth/network-request-failed') return 'Network error — check your connection.'
+  return 'Incorrect email or password.'
+}
 
-  function submit(e: React.FormEvent) {
+function AdminLogin() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (tryAdminLogin(password)) {
-      onSuccess()
-    } else {
-      setError(true)
+    setSubmitting(true)
+    setError(null)
+    try {
+      await adminLogin(email, password)
+      // onAuthStateChanged in AdminApp picks up the signed-in user automatically
+    } catch (err) {
+      setError(firebaseAuthErrorMessage(err))
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -88,24 +105,35 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
 
         <form onSubmit={submit} className="border border-[#1E1E23] bg-[#0D0D10] p-8 space-y-5">
           <div>
+            <label className={labelCls}>Email</label>
+            <input
+              type="email"
+              autoFocus
+              className={inputCls}
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                setError(null)
+              }}
+              placeholder="you@lastgame.gg"
+            />
+          </div>
+          <div>
             <label className={labelCls}>Password</label>
             <input
               type="password"
-              autoFocus
               className={inputCls}
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value)
-                setError(false)
+                setError(null)
               }}
               placeholder="••••••••••"
             />
-            {error && (
-              <p className="text-xs text-[#c25c5c] mt-2">Incorrect password. Try again.</p>
-            )}
+            {error && <p className="text-xs text-[#c25c5c] mt-2">{error}</p>}
           </div>
-          <button type="submit" className={`${btnGold} w-full`}>
-            Log In
+          <button type="submit" disabled={submitting} className={`${btnGold} w-full disabled:opacity-60`}>
+            {submitting ? 'Logging In…' : 'Log In'}
           </button>
           <a
             href="#/"
@@ -117,8 +145,8 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
         </form>
 
         <p className="text-[11px] text-[#3a3a40] text-center mt-6 leading-relaxed">
-          Prototype login — stored in this browser only. See the admin spec doc for what a real,
-          multi-admin auth system needs.
+          Accounts are managed in the Firebase console (Authentication → Users) — add or remove
+          admins there.
         </p>
       </div>
     </div>
@@ -526,8 +554,67 @@ function Badge({ tone, children }: { tone: 'gold' | 'green' | 'muted'; children:
 
 /* ─── dashboard ──────────────────────────────────────────────── */
 
+function ImportDataBanner() {
+  const { importLocalDataToFirestore, seedDefaultsToFirestore } = useStore()
+  const [busy, setBusy] = useState<'local' | 'defaults' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function run(kind: 'local' | 'defaults') {
+    setBusy(kind)
+    setError(null)
+    try {
+      if (kind === 'local') await importLocalDataToFirestore()
+      else await seedDefaultsToFirestore()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Import failed. Try again.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="border border-[#C9A22730] bg-[#C9A22708] p-6 mb-8">
+      <div
+        className="inline-block text-[9px] tracking-[0.25em] uppercase text-[#C9A227] border border-[#C9A22730] bg-[#C9A22715] px-2.5 py-1 mb-4"
+        style={{ fontFamily: 'DM Mono, monospace' }}
+      >
+        First-Time Setup
+      </div>
+      <h3
+        className="text-lg font-bold text-[#E8E8E6] mb-2"
+        style={{ fontFamily: 'Rajdhani, sans-serif' }}
+      >
+        This Firestore project is empty
+      </h3>
+      <p className="text-sm text-[#888] leading-relaxed mb-5 max-w-2xl">
+        Bring in content to get started: import whatever you already had in this browser (from
+        before Firebase was connected), or start from the site's original starter content.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          type="button"
+          onClick={() => run('local')}
+          disabled={busy !== null}
+          className={`${btnGold} disabled:opacity-60`}
+        >
+          {busy === 'local' ? 'Importing…' : 'Import This Browser’s Data'}
+        </button>
+        <button
+          type="button"
+          onClick={() => run('defaults')}
+          disabled={busy !== null}
+          className={`${btnGhost} disabled:opacity-60`}
+        >
+          {busy === 'defaults' ? 'Importing…' : 'Use Starter Content Instead'}
+        </button>
+      </div>
+      {error && <p className="text-xs text-[#c25c5c] mt-3">{error}</p>}
+    </div>
+  )
+}
+
 function Dashboard({ onNavigate }: { onNavigate: (m: ModuleId) => void }) {
-  const { divisions, milestones, events, staff, news, rules } = useStore()
+  const { divisions, milestones, events, staff, news, rules, hasAnyData } = useStore()
   const upcoming = events.filter((e) => e.status === 'upcoming')
 
   const cards: { label: string; value: number; module: ModuleId }[] = [
@@ -545,6 +632,7 @@ function Dashboard({ onNavigate }: { onNavigate: (m: ModuleId) => void }) {
         title="Dashboard"
         description="A snapshot of everything on the public site. Click any card to jump to that module."
       />
+      {!hasAnyData && <ImportDataBanner />}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-[#1A1A1E]">
         {cards.map((c) => (
           <button
@@ -1021,10 +1109,13 @@ function backToSite() {
 }
 
 export default function AdminApp() {
-  const [authed, setAuthed] = useState(isAdminAuthed())
+  const [user, setUser] = useState<User | null | 'loading'>('loading')
   const [active, setActive] = useState<ModuleId>('dashboard')
 
-  if (!authed) return <AdminLogin onSuccess={() => setAuthed(true)} />
+  useEffect(() => subscribeAuth(setUser), [])
+
+  if (user === 'loading') return <FullScreenLoader />
+  if (!user) return <AdminLogin />
 
   return (
     <div className="min-h-screen bg-[#0B0B0D] text-[#E8E8E6]">
@@ -1049,10 +1140,7 @@ export default function AdminApp() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              adminLogout()
-              setAuthed(false)
-            }}
+            onClick={() => adminLogout()}
             className="text-[9px] sm:text-[10px] tracking-[0.15em] uppercase text-[#666] hover:text-[#c25c5c] transition-colors duration-200 whitespace-nowrap"
             style={{ fontFamily: 'DM Mono, monospace' }}
           >
@@ -1061,7 +1149,7 @@ export default function AdminApp() {
         </div>
       </header>
 
-      <nav className="border-b border-[#1A1A1E] px-4 sm:px-6 flex gap-5 sm:gap-6 overflow-x-auto">
+      <nav className="border-b border-[#1A1A1E] px-4 sm:px-6 flex justify-center gap-5 sm:gap-6 overflow-x-auto">
         {MODULES.map((m) => (
           <button
             key={m.id}

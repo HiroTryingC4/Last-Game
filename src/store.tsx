@@ -1,5 +1,20 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import {
+  collection,
+  doc,
+  onSnapshot,
+  setDoc,
+  deleteDoc,
+  writeBatch,
+} from 'firebase/firestore'
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  type User,
+} from 'firebase/auth'
+import { db, auth } from './firebase'
 import teamOriginal from './Images/ORIGINAL.jpg'
 import teamReborn from './Images/749981256_1582934506531124_7454687730703426001_n.jpg'
 import teamWarzie from './Images/WARZIE.jpg'
@@ -306,7 +321,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   tryoutFormUrl: '#',
 }
 
-/* ─── persistence ───────────────────────────────────────────── */
+/* ─── legacy localStorage reader (one-time import into Firestore only) ─ */
 
 const STORAGE_PREFIX = 'lg_admin_'
 
@@ -320,12 +335,35 @@ function loadFromStorage<T>(key: string, fallback: T): T {
   }
 }
 
-function saveToStorage<T>(key: string, value: T) {
-  try {
-    window.localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value))
-  } catch {
-    // localStorage full or unavailable — edits stay in memory for this session
+/* ─── firestore sync helpers ─────────────────────────────────── */
+
+function subscribeCollection<T>(name: string, cb: (items: T[]) => void, onError: (err: Error) => void) {
+  return onSnapshot(
+    collection(db, name),
+    (snap) => cb(snap.docs.map((d) => d.data() as T)),
+    (err) => onError(err),
+  )
+}
+
+async function syncCollection<T extends { id: string }>(name: string, prev: T[], next: T[]) {
+  const prevMap = new Map(prev.map((i) => [i.id, i]))
+  const nextIds = new Set(next.map((i) => i.id))
+
+  const ops: Promise<void>[] = []
+  for (const item of next) {
+    const old = prevMap.get(item.id)
+    if (!old || JSON.stringify(old) !== JSON.stringify(item)) {
+      ops.push(setDoc(doc(db, name, item.id), item))
+    }
   }
+  for (const item of prev) {
+    if (!nextIds.has(item.id)) ops.push(deleteDoc(doc(db, name, item.id)))
+  }
+  await Promise.all(ops)
+}
+
+function batchSetCollection<T extends { id: string }>(batch: ReturnType<typeof writeBatch>, name: string, items: T[]) {
+  for (const item of items) batch.set(doc(db, name, item.id), item)
 }
 
 /* ─── context ───────────────────────────────────────────────── */
@@ -345,36 +383,169 @@ interface StoreValue {
   setRules: (v: RuleItem[]) => void
   settings: SiteSettings
   setSettings: (v: SiteSettings) => void
-  resetAllData: () => void
+  loading: boolean
+  error: string | null
+  hasAnyData: boolean
+  importLocalDataToFirestore: () => Promise<void>
+  seedDefaultsToFirestore: () => Promise<void>
 }
 
 const StoreContext = createContext<StoreValue | null>(null)
 
+type LoadedFlags = {
+  divisions: boolean
+  milestones: boolean
+  events: boolean
+  staff: boolean
+  news: boolean
+  rules: boolean
+  settings: boolean
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [divisions, setDivisions] = useState<Division[]>(() => loadFromStorage('divisions', DEFAULT_DIVISIONS))
-  const [milestones, setMilestones] = useState<Milestone[]>(() => loadFromStorage('milestones', DEFAULT_MILESTONES))
-  const [events, setEvents] = useState<EventItem[]>(() => loadFromStorage('events', DEFAULT_EVENTS))
-  const [staff, setStaff] = useState<StaffMember[]>(() => loadFromStorage('staff', DEFAULT_STAFF))
-  const [news, setNews] = useState<NewsArticle[]>(() => loadFromStorage('news', DEFAULT_NEWS))
-  const [rules, setRules] = useState<RuleItem[]>(() => loadFromStorage('rules', DEFAULT_RULES))
-  const [settings, setSettings] = useState<SiteSettings>(() => loadFromStorage('settings', DEFAULT_SETTINGS))
+  const [divisions, setDivisionsState] = useState<Division[]>([])
+  const [milestones, setMilestonesState] = useState<Milestone[]>([])
+  const [events, setEventsState] = useState<EventItem[]>([])
+  const [staff, setStaffState] = useState<StaffMember[]>([])
+  const [news, setNewsState] = useState<NewsArticle[]>([])
+  const [rules, setRulesState] = useState<RuleItem[]>([])
+  const [settings, setSettingsState] = useState<SiteSettings>(DEFAULT_SETTINGS)
+  const [loaded, setLoaded] = useState<LoadedFlags>({
+    divisions: false,
+    milestones: false,
+    events: false,
+    staff: false,
+    news: false,
+    rules: false,
+    settings: false,
+  })
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => saveToStorage('divisions', divisions), [divisions])
-  useEffect(() => saveToStorage('milestones', milestones), [milestones])
-  useEffect(() => saveToStorage('events', events), [events])
-  useEffect(() => saveToStorage('staff', staff), [staff])
-  useEffect(() => saveToStorage('news', news), [news])
-  useEffect(() => saveToStorage('rules', rules), [rules])
-  useEffect(() => saveToStorage('settings', settings), [settings])
+  useEffect(() => {
+    function onError(context: string) {
+      return (err: Error) => {
+        console.error(`[firestore:${context}]`, err)
+        setError(
+          `Couldn't load "${context}" from Firestore (${err.message}). Check that Firestore is enabled and the security rules are published.`,
+        )
+      }
+    }
 
-  function resetAllData() {
-    setDivisions(DEFAULT_DIVISIONS)
-    setMilestones(DEFAULT_MILESTONES)
-    setEvents(DEFAULT_EVENTS)
-    setStaff(DEFAULT_STAFF)
-    setNews(DEFAULT_NEWS)
-    setRules(DEFAULT_RULES)
-    setSettings(DEFAULT_SETTINGS)
+    const unsubs = [
+      subscribeCollection<Division>(
+        'divisions',
+        (v) => {
+          setDivisionsState(v)
+          setLoaded((l) => ({ ...l, divisions: true }))
+        },
+        onError('divisions'),
+      ),
+      subscribeCollection<Milestone>(
+        'milestones',
+        (v) => {
+          setMilestonesState(v)
+          setLoaded((l) => ({ ...l, milestones: true }))
+        },
+        onError('milestones'),
+      ),
+      subscribeCollection<EventItem>(
+        'events',
+        (v) => {
+          setEventsState(v)
+          setLoaded((l) => ({ ...l, events: true }))
+        },
+        onError('events'),
+      ),
+      subscribeCollection<StaffMember>(
+        'staff',
+        (v) => {
+          setStaffState(v)
+          setLoaded((l) => ({ ...l, staff: true }))
+        },
+        onError('staff'),
+      ),
+      subscribeCollection<NewsArticle>(
+        'news',
+        (v) => {
+          setNewsState(v)
+          setLoaded((l) => ({ ...l, news: true }))
+        },
+        onError('news'),
+      ),
+      subscribeCollection<RuleItem>(
+        'rules',
+        (v) => {
+          setRulesState(v)
+          setLoaded((l) => ({ ...l, rules: true }))
+        },
+        onError('rules'),
+      ),
+      onSnapshot(
+        doc(db, 'settings', 'site'),
+        (snap) => {
+          if (snap.exists()) setSettingsState(snap.data() as SiteSettings)
+          setLoaded((l) => ({ ...l, settings: true }))
+        },
+        onError('settings'),
+      ),
+    ]
+    return () => unsubs.forEach((u) => u())
+  }, [])
+
+  const loading = !Object.values(loaded).every(Boolean)
+  const hasAnyData = loading
+    ? true
+    : divisions.length > 0 ||
+      milestones.length > 0 ||
+      events.length > 0 ||
+      staff.length > 0 ||
+      news.length > 0 ||
+      rules.length > 0
+
+  function setDivisions(next: Division[]) {
+    syncCollection('divisions', divisions, next).catch(console.error)
+  }
+  function setMilestones(next: Milestone[]) {
+    syncCollection('milestones', milestones, next).catch(console.error)
+  }
+  function setEvents(next: EventItem[]) {
+    syncCollection('events', events, next).catch(console.error)
+  }
+  function setStaff(next: StaffMember[]) {
+    syncCollection('staff', staff, next).catch(console.error)
+  }
+  function setNews(next: NewsArticle[]) {
+    syncCollection('news', news, next).catch(console.error)
+  }
+  function setRules(next: RuleItem[]) {
+    syncCollection('rules', rules, next).catch(console.error)
+  }
+  function setSettings(next: SiteSettings) {
+    setDoc(doc(db, 'settings', 'site'), next).catch(console.error)
+  }
+
+  async function importLocalDataToFirestore() {
+    const batch = writeBatch(db)
+    batchSetCollection(batch, 'divisions', loadFromStorage('divisions', DEFAULT_DIVISIONS))
+    batchSetCollection(batch, 'milestones', loadFromStorage('milestones', DEFAULT_MILESTONES))
+    batchSetCollection(batch, 'events', loadFromStorage('events', DEFAULT_EVENTS))
+    batchSetCollection(batch, 'staff', loadFromStorage('staff', DEFAULT_STAFF))
+    batchSetCollection(batch, 'news', loadFromStorage('news', DEFAULT_NEWS))
+    batchSetCollection(batch, 'rules', loadFromStorage('rules', DEFAULT_RULES))
+    batch.set(doc(db, 'settings', 'site'), loadFromStorage('settings', DEFAULT_SETTINGS))
+    await batch.commit()
+  }
+
+  async function seedDefaultsToFirestore() {
+    const batch = writeBatch(db)
+    batchSetCollection(batch, 'divisions', DEFAULT_DIVISIONS)
+    batchSetCollection(batch, 'milestones', DEFAULT_MILESTONES)
+    batchSetCollection(batch, 'events', DEFAULT_EVENTS)
+    batchSetCollection(batch, 'staff', DEFAULT_STAFF)
+    batchSetCollection(batch, 'news', DEFAULT_NEWS)
+    batchSetCollection(batch, 'rules', DEFAULT_RULES)
+    batch.set(doc(db, 'settings', 'site'), DEFAULT_SETTINGS)
+    await batch.commit()
   }
 
   return (
@@ -394,7 +565,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setRules,
         settings,
         setSettings,
-        resetAllData,
+        loading,
+        error,
+        hasAnyData,
+        importLocalDataToFirestore,
+        seedDefaultsToFirestore,
       }}
     >
       {children}
@@ -408,23 +583,32 @@ export function useStore(): StoreValue {
   return ctx
 }
 
-/* ─── admin auth (client-side only — see spec doc for real-auth caveats) ─ */
-
-const ADMIN_SESSION_KEY = 'lg_admin_session'
-const ADMIN_PASSWORD = 'lastgame2026'
-
-export function isAdminAuthed(): boolean {
-  return window.sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true'
+export function FullScreenLoader() {
+  return (
+    <div className="min-h-screen bg-[#0B0B0D] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-2 h-2 bg-[#C9A227] rotate-45 animate-pulse" />
+        <span
+          className="text-[10px] tracking-[0.3em] uppercase text-[#444]"
+          style={{ fontFamily: 'DM Mono, monospace' }}
+        >
+          Loading
+        </span>
+      </div>
+    </div>
+  )
 }
 
-export function tryAdminLogin(password: string): boolean {
-  if (password === ADMIN_PASSWORD) {
-    window.sessionStorage.setItem(ADMIN_SESSION_KEY, 'true')
-    return true
-  }
-  return false
+/* ─── admin auth (real Firebase Auth — email/password) ───────── */
+
+export function subscribeAuth(cb: (user: User | null) => void) {
+  return onAuthStateChanged(auth, cb)
 }
 
-export function adminLogout() {
-  window.sessionStorage.removeItem(ADMIN_SESSION_KEY)
+export async function adminLogin(email: string, password: string): Promise<void> {
+  await signInWithEmailAndPassword(auth, email, password)
+}
+
+export function adminLogout(): Promise<void> {
+  return signOut(auth)
 }

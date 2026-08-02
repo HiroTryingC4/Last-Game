@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import AdminApp from './Admin'
-import { StoreProvider } from './store'
+import { StoreProvider, useStore, FullScreenLoader } from './store'
 import './index.css'
 
 function useHashRoute() {
@@ -17,11 +17,28 @@ function useHashRoute() {
   return hash
 }
 
+function AppGate({ isAdmin }: { isAdmin: boolean }) {
+  const { loading, error } = useStore()
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#0B0B0D] flex items-center justify-center px-6">
+        <p className="max-w-md text-sm text-[#c25c5c] text-center leading-relaxed">{error}</p>
+      </div>
+    )
+  }
+  if (loading) return <FullScreenLoader />
+  return isAdmin ? <AdminApp /> : <App />
+}
+
 function Root() {
   const hash = useHashRoute()
   const isAdmin = hash.startsWith('#/admin')
 
-  return <StoreProvider>{isAdmin ? <AdminApp /> : <App />}</StoreProvider>
+  return (
+    <StoreProvider>
+      <AppGate isAdmin={isAdmin} />
+    </StoreProvider>
+  )
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
