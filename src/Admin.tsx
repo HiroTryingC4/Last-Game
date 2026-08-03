@@ -388,6 +388,7 @@ function CrudManager<T extends { id: string }>({
   const [draft, setDraft] = useState<Record<string, any> | null>(null)
   const [isNew, setIsNew] = useState(false)
   const [justSaved, setJustSaved] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<T | null>(null)
 
   function openNew() {
     setDraft({ ...makeEmpty(), id: genId() })
@@ -409,9 +410,13 @@ function CrudManager<T extends { id: string }>({
   }
 
   function remove(item: T) {
-    if (window.confirm(`Delete "${recordLabel(item)}"? This can't be undone.`)) {
-      setItems(items.filter((i) => i.id !== item.id))
-    }
+    setConfirmDelete(item)
+  }
+
+  function confirmRemove() {
+    if (!confirmDelete) return
+    setItems(items.filter((i) => i.id !== confirmDelete.id))
+    setConfirmDelete(null)
   }
 
   return (
@@ -532,6 +537,15 @@ function CrudManager<T extends { id: string }>({
           autoCloseMs={1400}
         />
       )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title={`Delete "${recordLabel(confirmDelete)}"?`}
+          message="This can't be undone."
+          onConfirm={confirmRemove}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   )
 }
@@ -640,6 +654,55 @@ function SuccessModal({
         <button type="button" onClick={onClose} className={`${btnGold} mt-1`}>
           {autoCloseMs ? 'Dismiss' : 'Done'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+function ConfirmModal({
+  title,
+  message,
+  confirmLabel = 'Delete',
+  onConfirm,
+  onCancel,
+}: {
+  title: string
+  message?: string
+  confirmLabel?: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-xs bg-[#0D0D10] border border-[#c25c5c30] px-8 py-7 flex flex-col items-center text-center gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-10 h-10 rounded-full bg-[#c25c5c15] border border-[#c25c5c30] flex items-center justify-center text-[#c25c5c] text-base">
+          !
+        </div>
+        <h3
+          className="text-base font-bold text-[#E8E8E6]"
+          style={{ fontFamily: 'Rajdhani, sans-serif' }}
+        >
+          {title}
+        </h3>
+        {message && <p className="text-xs text-[#888] leading-relaxed">{message}</p>}
+        <div className="flex items-center gap-3 mt-1">
+          <button type="button" onClick={onCancel} className={btnGhost}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="px-5 py-2.5 bg-[#c25c5c] text-[#0B0B0D] text-xs font-bold tracking-[0.15em] uppercase hover:bg-[#d97070] transition-colors duration-200"
+          >
+            {confirmLabel}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -1489,6 +1552,7 @@ function AdminRoster({ myRole }: { myRole: AdminRole }) {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [revoking, setRevoking] = useState<string | null>(null)
+  const [confirmRevoke, setConfirmRevoke] = useState<AdminProfile | null>(null)
   const currentUid = auth.currentUser?.uid
 
   useEffect(() => {
@@ -1510,9 +1574,15 @@ function AdminRoster({ myRole }: { myRole: AdminRole }) {
     )
   }, [])
 
-  async function revoke(uid: string) {
-    if (uid === currentUid) return
-    if (!window.confirm("Revoke this admin's access? They will no longer be able to log in.")) return
+  function requestRevoke(admin: AdminProfile) {
+    if (admin.uid === currentUid) return
+    setConfirmRevoke(admin)
+  }
+
+  async function revoke() {
+    if (!confirmRevoke) return
+    const uid = confirmRevoke.uid
+    setConfirmRevoke(null)
     setRevoking(uid)
     try {
       await deleteDoc(doc(db, 'admins', uid))
@@ -1544,7 +1614,7 @@ function AdminRoster({ myRole }: { myRole: AdminRole }) {
             {myRole === 'head' && a.uid !== currentUid && (
               <button
                 type="button"
-                onClick={() => revoke(a.uid)}
+                onClick={() => requestRevoke(a)}
                 disabled={revoking === a.uid}
                 className={`px-3 py-1.5 disabled:opacity-60 ${btnDanger}`}
               >
@@ -1555,6 +1625,16 @@ function AdminRoster({ myRole }: { myRole: AdminRole }) {
         ))}
       </div>
       {error && <p className="text-xs text-[#c25c5c] mt-3">{error}</p>}
+
+      {confirmRevoke && (
+        <ConfirmModal
+          title="Revoke Admin Access?"
+          message={`${confirmRevoke.email} will no longer be able to log in.`}
+          confirmLabel="Revoke"
+          onConfirm={revoke}
+          onCancel={() => setConfirmRevoke(null)}
+        />
+      )}
     </div>
   )
 }
