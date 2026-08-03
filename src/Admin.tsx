@@ -104,7 +104,15 @@ function firebaseAuthErrorMessage(err: unknown): string {
   return 'Incorrect email or password.'
 }
 
-function AdminLogin({ rejectedMessage }: { rejectedMessage?: string }) {
+function AdminLogin({
+  rejectedMessage,
+  justLoggedOut,
+  onDismissLoggedOut,
+}: {
+  rejectedMessage?: string
+  justLoggedOut?: boolean
+  onDismissLoggedOut?: () => void
+}) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(rejectedMessage ?? null)
@@ -189,6 +197,14 @@ function AdminLogin({ rejectedMessage }: { rejectedMessage?: string }) {
           admins there.
         </p>
       </div>
+
+      {justLoggedOut && (
+        <SuccessModal
+          title="Logged Out"
+          onClose={() => onDismissLoggedOut?.()}
+          autoCloseMs={1400}
+        />
+      )}
     </div>
   )
 }
@@ -371,6 +387,7 @@ function CrudManager<T extends { id: string }>({
 }) {
   const [draft, setDraft] = useState<Record<string, any> | null>(null)
   const [isNew, setIsNew] = useState(false)
+  const [justSaved, setJustSaved] = useState<string | null>(null)
 
   function openNew() {
     setDraft({ ...makeEmpty(), id: genId() })
@@ -388,6 +405,7 @@ function CrudManager<T extends { id: string }>({
     if (isNew) setItems([clean, ...items])
     else setItems(items.map((i) => (i.id === clean.id ? clean : i)))
     setDraft(null)
+    setJustSaved(isNew ? 'Added' : 'Saved')
   }
 
   function remove(item: T) {
@@ -506,6 +524,14 @@ function CrudManager<T extends { id: string }>({
           </div>
         </FormModal>
       )}
+
+      {justSaved && (
+        <SuccessModal
+          title={`${justSaved} — ${title}`}
+          onClose={() => setJustSaved(null)}
+          autoCloseMs={1400}
+        />
+      )}
     </div>
   )
 }
@@ -570,6 +596,50 @@ function FormModal({
           </button>
         </div>
         {children}
+      </div>
+    </div>
+  )
+}
+
+function SuccessModal({
+  title,
+  message,
+  onClose,
+  autoCloseMs,
+}: {
+  title: string
+  message?: string
+  onClose: () => void
+  autoCloseMs?: number
+}) {
+  useEffect(() => {
+    if (!autoCloseMs) return
+    const t = setTimeout(onClose, autoCloseMs)
+    return () => clearTimeout(t)
+  }, [autoCloseMs, onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xs bg-[#0D0D10] border border-[#C9A22730] px-8 py-7 flex flex-col items-center text-center gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-10 h-10 rounded-full bg-[#C9A22715] border border-[#C9A22730] flex items-center justify-center text-[#C9A227] text-base">
+          ✓
+        </div>
+        <h3
+          className="text-base font-bold text-[#E8E8E6]"
+          style={{ fontFamily: 'Rajdhani, sans-serif' }}
+        >
+          {title}
+        </h3>
+        {message && <p className="text-xs text-[#888] leading-relaxed">{message}</p>}
+        <button type="button" onClick={onClose} className={`${btnGold} mt-1`}>
+          {autoCloseMs ? 'Dismiss' : 'Done'}
+        </button>
       </div>
     </div>
   )
@@ -1173,7 +1243,6 @@ function SiteSettingsForm() {
   function save() {
     setSettings(draft)
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
   }
 
   const fields: FieldDef[] = [
@@ -1208,9 +1277,12 @@ function SiteSettingsForm() {
           <button type="button" onClick={save} className={btnGold}>
             Save Settings
           </button>
-          {saved && <span className="text-xs text-[#5FAE81]">Saved.</span>}
         </div>
       </div>
+
+      {saved && (
+        <SuccessModal title="Settings Saved" onClose={() => setSaved(false)} autoCloseMs={1400} />
+      )}
     </div>
   )
 }
@@ -1224,7 +1296,7 @@ function CreateAdminForm() {
   const [role, setRole] = useState<AdminRole>('admin')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const [success, setSuccess] = useState<{ email: string; role: AdminRole } | null>(null)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -1241,7 +1313,7 @@ function CreateAdminForm() {
     setBusy(true)
     try {
       await createAdminAccount(email, password, role)
-      setSuccess(`${role === 'head' ? 'Head admin' : 'Admin'} account created for ${email}. Share the password with them directly — they can change it once logged in.`)
+      setSuccess({ email, role })
       setEmail('')
       setPassword('')
       setConfirm('')
@@ -1305,7 +1377,14 @@ function CreateAdminForm() {
         {busy ? 'Creating…' : 'Create Admin Account'}
       </button>
       {error && <p className="text-xs text-[#c25c5c]">{error}</p>}
-      {success && <p className="text-xs text-[#5FAE81] leading-relaxed">{success}</p>}
+
+      {success && (
+        <SuccessModal
+          title={`${success.role === 'head' ? 'Head Admin' : 'Admin'} Account Created`}
+          message={`${success.email} can now log in. Share the password with them directly — they can change it once logged in.`}
+          onClose={() => setSuccess(null)}
+        />
+      )}
     </form>
   )
 }
@@ -1386,7 +1465,14 @@ function ChangePasswordForm() {
         {busy ? 'Updating…' : 'Update Password'}
       </button>
       {error && <p className="text-xs text-[#c25c5c]">{error}</p>}
-      {success && <p className="text-xs text-[#5FAE81]">Password updated.</p>}
+
+      {success && (
+        <SuccessModal
+          title="Password Updated"
+          onClose={() => setSuccess(false)}
+          autoCloseMs={1400}
+        />
+      )}
     </form>
   )
 }
@@ -1560,6 +1646,7 @@ type Gate = 'loading' | 'unauthed' | 'rejected' | { user: User; role: AdminRole 
 export default function AdminApp() {
   const [gate, setGate] = useState<Gate>('loading')
   const [active, setActive] = useState<ModuleId>('dashboard')
+  const [justLoggedOut, setJustLoggedOut] = useState(false)
 
   useEffect(() => {
     return subscribeAuth((u) => {
@@ -1568,6 +1655,7 @@ export default function AdminApp() {
         return
       }
       setGate('loading')
+      setJustLoggedOut(false)
       getAdminAccess(u.uid)
         .then((access) => {
           if (access) setGate({ user: u, role: access.role })
@@ -1583,13 +1671,25 @@ export default function AdminApp() {
     })
   }, [])
 
+  function logOut() {
+    setJustLoggedOut(true)
+    adminLogout()
+  }
+
   if (gate === 'loading') return <FullScreenLoader />
   if (gate === 'rejected') {
     return (
       <AdminLogin rejectedMessage="That account isn't an approved admin. Ask a head admin to add you from their My Account tab." />
     )
   }
-  if (gate === 'unauthed') return <AdminLogin />
+  if (gate === 'unauthed') {
+    return (
+      <AdminLogin
+        justLoggedOut={justLoggedOut}
+        onDismissLoggedOut={() => setJustLoggedOut(false)}
+      />
+    )
+  }
   const { user, role } = gate
 
   return (
@@ -1621,7 +1721,7 @@ export default function AdminApp() {
           </button>
           <button
             type="button"
-            onClick={() => adminLogout()}
+            onClick={logOut}
             className="text-[9px] sm:text-[10px] tracking-[0.15em] uppercase text-[#666] hover:text-[#c25c5c] transition-colors duration-200 whitespace-nowrap"
             style={{ fontFamily: 'DM Mono, monospace' }}
           >
