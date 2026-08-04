@@ -652,10 +652,10 @@ function TeamModal({ team, onClose }: { team: Division; onClose: () => void }) {
 
 function Milestones() {
   const { milestones } = useStore()
-  const years = Array.from(new Set(milestones.map((m) => m.year)))
-  const [openYears, setOpenYears] = useState<Set<string>>(
-    () => new Set([years[years.length - 1]]),
+  const years = Array.from(new Set(milestones.map((m) => m.year))).sort(
+    (a, b) => Number(b) - Number(a),
   )
+  const [openYears, setOpenYears] = useState<Set<string>>(() => new Set([years[0]]))
 
   const toggleYear = (year: string) => {
     setOpenYears((prev) => {
